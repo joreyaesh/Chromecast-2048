@@ -1,99 +1,215 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>2048</title>
+	<style type="text/css">
+		body {
+		overflow:hidden;
+		}
+		div{
+		height:720PX;
+		width:1280PX;
+		text-align:center;
+		border:0px solid silver;
+		display: table-cell;
+		vertical-align:middle;
+		color:#FFFFFF;
+		background-color:#000000;
+		font-weight:bold;
+		font-family:Verdana, Geneva, sans-serif;
+		font-size:40px;
+	}
+	</style>
+	<meta charset="utf-8">
+	<title>2048</title>
+	
+	<script src="//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js"></script>
 
-  <link href="style/main.css" rel="stylesheet" type="text/css">
-  <link rel="shortcut icon" href="favicon.ico">
-  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png">
-  <link rel="apple-touch-startup-image" href="meta/apple-touch-startup-image-640x1096.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)"> <!-- iPhone 5+ -->
-  <link rel="apple-touch-startup-image" href="meta/apple-touch-startup-image-640x920.png"  media="(device-width: 320px) and (device-height: 480px) and (-webkit-device-pixel-ratio: 2)"> <!-- iPhone, retina -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+	<link href="style/main.css" rel="stylesheet" type="text/css">
+	<link rel="shortcut icon" href="favicon.ico">
+	<link rel="apple-touch-icon" href="meta/apple-touch-icon.png">
+	<link rel="apple-touch-startup-image" href="meta/apple-touch-startup-image-640x1096.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)"> <!-- iPhone 5+ -->
+	<link rel="apple-touch-startup-image" href="meta/apple-touch-startup-image-640x920.png" media="(device-width: 320px) and (device-height: 480px) and (-webkit-device-pixel-ratio: 2)"> <!-- iPhone, retina -->
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black">
 
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
+	<meta name="HandheldFriendly" content="True">
+	<meta name="MobileOptimized" content="320">
+	<meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
 </head>
 <body>
-  <div class="container">
-    <div class="heading">
-      <h1 class="title">2048</h1>
-      <div class="scores-container">
-        <div class="score-container">0</div>
-        <div class="best-container">0</div>
-      </div>
-    </div>
+	<script type="text/javascript">
+		window.onload = function() {
+		cast.receiver.logger.setLevelValue(0);
+		window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+		console.log('Starting Receiver Manager');
+		
+		// handler for the 'ready' event
+		castReceiverManager.onReady = function(event) {
+			console.log('Received Ready event: ' + JSON.stringify(event.data));
+			window.castReceiverManager.setApplicationState("Application status is ready...");
+		};
+		
+		// handler for 'senderconnected' event
+		castReceiverManager.onSenderConnected = function(event) {
+			console.log('Received Sender Connected event: ' + event.data);
+			console.log(window.castReceiverManager.getSender(event.data).userAgent);
+		};
+		
+		// handler for 'senderdisconnected' event
+		castReceiverManager.onSenderDisconnected = function(event) {
+			console.log('Received Sender Disconnected event: ' + event.data);
+			if (window.castReceiverManager.getSenders().length == 0) {
+			window.close();
+			}
+		};
+		
+		// handler for 'systemvolumechanged' event
+		castReceiverManager.onSystemVolumeChanged = function(event) {
+			console.log('Received System Volume Changed event: ' + event.data['level'] + ' ' +
+				event.data['muted']);
+		};
 
-    <div class="above-game">
-      <p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
-      <a class="restart-button">New Game</a>
-    </div>
+		// create a CastMessageBus to handle messages for a custom namespace
+		window.messageBus =
+			window.castReceiverManager.getCastMessageBus(
+				'urn:x-cast:com.whaleyjosh.2048.swipe');
 
-    <div class="game-container">
-      <div class="game-message">
-        <p></p>
-        <div class="lower">
-	        <a class="keep-playing-button">Keep going</a>
-          <a class="retry-button">Try again</a>
-        </div>
-      </div>
+		// handler for the CastMessageBus message event
+		window.messageBus.onMessage = function(event) {
+			console.log('Message [' + event.senderId + ']: ' + event.data);
+			// display the message from the sender
+			displayText(event.data);
+			// inform all senders on the CastMessageBus of the incoming message event
+			// sender message listener will be invoked
+			window.messageBus.send(event.senderId, event.data);
+		}
 
-      <div class="grid-container">
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-      </div>
+		// initialize the CastReceiverManager with an application status message
+		window.castReceiverManager.start({statusText: "Application is starting"});
+		console.log('Receiver Manager started');
+		};
+		
+		// utility function to display the text message in the input field
+		function displayText(text) {
+		console.log(text);
+		document.getElementById("message").innerHTML=text;
+		window.castReceiverManager.setApplicationState(text);
+		};
 
-      <div class="tile-container">
+		function press(key) {
+		var eventObj = document.createEvent("Events");
+		eventObj.initEvent("keydown", true, true);
+		eventObj.which = key;
+		document.dispatchEvent(eventObj);
+		}
+		var customMessageBus_swipe = castReceiverManager.getCastMessageBus('urn:x-cast:com.whaleyjosh.2048.swipe');
+		customMessageBus_swipe.onMessage = function(event) {
+		// right=39, left=37, up=38, down=40
+		for (y=0; y<=1000; y++) { press(Math.floor(Math.random() * 4) + 37); }
+		}
+		
+		var customMessageBus_reset = castReceiverManager.getCastMessageBus('urn:x-cast:com.whaleyjosh.2048.reset');
+		customMessageBus_reset.onMessage = function(event) {
+		press(82); }
+		}
+	</script>
+	<div class="container">
+	<div class="heading">
+		<h1 class="title">2048</h1>
+		<div class="scores-container">
+		<div class="score-container">0</div>
+		<div class="best-container">0</div>
+		</div>
+	</div>
 
-      </div>
-    </div>
+	<div class="above-game">
+		<p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
+		<a class="restart-button">New Game</a>
+	</div>
 
-    <p class="game-explanation">
-      <strong class="important">How to play:</strong> Use your <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong>
-    </p>
-    <hr>
-    <p>
-    <strong class="important">Note:</strong> This site is the official version of 2048. You can play it on your phone via <a href="http://git.io/2048">http://git.io/2048.</a> All other apps or sites are derivatives or fakes, and should be used with caution.
-    </p>
-    <hr>
-    <p>
-    Created by <a href="http://gabrielecirulli.com" target="_blank">Gabriele Cirulli.</a> Based on <a href="https://itunes.apple.com/us/app/1024!/id823499224" target="_blank">1024 by Veewo Studio</a> and conceptually similar to <a href="http://asherv.com/threes/" target="_blank">Threes by Asher Vollmer.</a>
-    </p>
-  </div>
+	<div class="game-container">
+		<div class="game-message">
+		<p></p>
+		<div class="lower">
+<a class="keep-playing-button">Keep going</a>
+			<a class="retry-button">Try again</a>
+		</div>
+		</div>
 
-  <script src="js/bind_polyfill.js"></script>
-  <script src="js/classlist_polyfill.js"></script>
-  <script src="js/animframe_polyfill.js"></script>
-  <script src="js/keyboard_input_manager.js"></script>
-  <script src="js/html_actuator.js"></script>
-  <script src="js/grid.js"></script>
-  <script src="js/tile.js"></script>
-  <script src="js/local_storage_manager.js"></script>
-  <script src="js/game_manager.js"></script>
-  <script src="js/application.js"></script>
+		<div class="grid-container">
+		<div class="grid-row">
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+		</div>
+		<div class="grid-row">
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+		</div>
+		<div class="grid-row">
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+		</div>
+		<div class="grid-row">
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+			<div class="grid-cell"></div>
+		</div>
+		</div>
+
+		<div class="tile-container">
+
+		</div>
+	</div>
+
+	<p class="game-explanation">
+		<strong class="important">How to play:</strong> Use your <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong>
+	</p>
+	<hr>
+	<p>
+	<strong class="important">Note:</strong> This site is the official version of 2048. You can play it on your phone via <a href="http://git.io/2048">http://git.io/2048.</a> All other apps or sites are derivatives or fakes, and should be used with caution.
+	</p>
+	<hr>
+	<p>
+	Created by <a href="http://gabrielecirulli.com" target="_blank">Gabriele Cirulli.</a> Based on <a href="https://itunes.apple.com/us/app/1024!/id823499224" target="_blank">1024 by Veewo Studio</a> and conceptually similar to <a href="http://asherv.com/threes/" target="_blank">Threes by Asher Vollmer.</a>
+	</p>
+	</div>
+
+	<script src="js/bind_polyfill.js"></script>
+	<script src="js/classlist_polyfill.js"></script>
+	<script src="js/animframe_polyfill.js"></script>
+	<script src="js/keyboard_input_manager.js"></script>
+	<script src="js/html_actuator.js"></script>
+	<script src="js/grid.js"></script>
+	<script src="js/tile.js"></script>
+	<script src="js/local_storage_manager.js"></script>
+	<script src="js/game_manager.js"></script>
+	<script src="js/application.js"></script>
+	
+	<script src="messageTypes.js"></script>
+	<script>
+		$(function() {
+			var receiver = new cast.receiver.Receiver('CD323F77', ['urn:x-cast:com.whaleyjosh.2048.swipe']),
+				channelHandler = new cast.receiver.ChannelHandler('urn:x-cast:com.whaleyjosh.2048.swipe'),
+				$messages = $('.messages');
+
+			channelHandler.addChannelFactory(
+				receiver.createChannelFactory('urn:x-cast:com.whaleyjosh.2048.swipe'));
+
+			receiver.start();
+
+			channelHandler.addEventListener(cast.receiver.Channel.EventType.MESSAGE, onMessage.bind(this));
+	
+			function onMessage(event) {
+				$messages.html(event.message.type);
+			}
+		});
+	</script>
 </body>
 </html>
